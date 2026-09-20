@@ -1,0 +1,64 @@
+# Production environment overrides
+replicaCount: 2
+
+image:
+  backend:
+    repository: ghcr.io/sbillion/medical-appointment-backend
+    tag: "1.0.0"
+    pullPolicy: Always
+  frontend:
+    repository: ghcr.io/sbillion/medical-appointment-frontend
+    tag: "1.0.0"
+    pullPolicy: Always
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: medical-appointment.example.com
+      paths:
+        - path: /api
+          pathType: Prefix
+          service: backend
+        - path: /
+          pathType: Prefix
+          service: frontend
+  tls:
+    - secretName: medical-appointment-tls
+      hosts:
+        - medical-appointment.example.com
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+
+resources:
+  backend:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+  frontend:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+postgres:
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+  persistence:
+    size: 10Gi
