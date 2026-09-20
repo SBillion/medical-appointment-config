@@ -33,6 +33,43 @@ medical-appointment-config/
 └── docs/                             # Documentation
 ```
 
+## 🔄 Auto-Sync Configuration
+
+This repository is configured with **automatic synchronization** enabled. When you push changes to the config repository, ArgoCD will automatically update your Kubernetes cluster.
+
+### How Auto-Sync Works
+
+1. **Continuous Polling**: ArgoCD polls the Git repository every 3 minutes
+2. **Webhook Triggers**: GitHub Actions workflow triggers immediate sync on push
+3. **Self-Healing**: ArgoCD automatically corrects drift between Git and cluster state
+
+### Triggering Syncs
+
+**Automatic:**
+- Push changes to `develop` branch → updates development cluster
+- Push changes to `main` branch → updates production cluster
+
+**Manual:**
+```bash
+# Sync specific application
+argocd app sync medical-appointment-develop
+
+# Sync with force
+argocd app sync medical-appointment-develop --force
+
+# Watch sync progress
+argocd app watch medical-appointment-develop
+```
+
+### Sync Configuration
+
+Both environments are configured with:
+- **Prune**: Automatically removes resources not in Git
+- **Self-Heal**: Auto-corrects manual changes
+- **Retry**: Up to 5 attempts with exponential backoff
+
+See [docs/AUTO_SYNC.md](docs/AUTO_SYNC.md) for detailed sync configuration and troubleshooting.
+
 ## 🚀 Quick Start
 
 ### Prerequisites

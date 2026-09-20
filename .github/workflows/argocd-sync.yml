@@ -1,0 +1,44 @@
+name: Update ArgoCD Application
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'charts/**'
+      - 'apps/**'
+
+jobs:
+  trigger-argocd-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine environment
+        id: env
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+            echo "environment=develop" >> $GITHUB_OUTPUT
+            echo "app_name=medical-appointment-develop" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "environment=production" >> $GITHUB_OUTPUT
+            echo "app_name=medical-appointment-production" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install ArgoCD CLI
+        run: |
+          curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+          sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
+          rm argocd-linux-amd64
+
+      - name: Configure ArgoCD
+        run: |
+          argocd login ${{ secrets.ARGOCD_SERVER }} --username ${{ secrets.ARGOCD_USERNAME }} --password ${{ secrets.ARGOCD_PASSWORD }} --insecure
+
+      - name: Trigger ArgoCD Sync
+        run: |
+          argocd app sync ${{ steps.env.outputs.app_name }} --async
+          echo "✅ Triggered sync for ${{ steps.env.outputs.app_name }}"
+
+      - name: Wait for sync completion
+        run: |
+          argocd app wait ${{ steps.env.outputs.app_name }} --timeout 300s --health
+          echo "✅ Sync completed successfully for ${{ steps.env.outputs.app_name }}"
