@@ -8,15 +8,13 @@
 image:
   backend:
     repository: ghcr.io/sbillion/medical-appointment-backend
-    tag: "initial"
+    tag: "13da3ef8d675616d05e66ebe2b90678c56820852"
     pullPolicy: Always
   frontend:
     repository: ghcr.io/sbillion/medical-appointment-frontend
-    tag: "initial"
+    tag: "13da3ef8d675616d05e66ebe2b90678c56820852"
     pullPolicy: Always
-
 replicaCount: 2
-
 ingress:
   enabled: true
   className: "nginx"
@@ -35,13 +33,11 @@ ingress:
     - secretName: medical-appointment-tls
       hosts:
         - medical-appointment.example.com
-
 autoscaling:
   enabled: true
   minReplicas: 2
   maxReplicas: 5
   targetCPUUtilizationPercentage: 70
-
 resources:
   backend:
     limits:
@@ -57,7 +53,6 @@ resources:
     requests:
       cpu: 100m
       memory: 128Mi
-
 postgres:
   resources:
     limits:
