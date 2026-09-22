@@ -8,15 +8,13 @@
 image:
   backend:
     repository: ghcr.io/sbillion/medical-appointment-backend
-    tag: "initial"
+    tag: "c24c745cc46c384a0277d89703ce054d6f2c3a2c"
     pullPolicy: Always
   frontend:
     repository: ghcr.io/sbillion/medical-appointment-frontend
-    tag: "initial"
+    tag: "c24c745cc46c384a0277d89703ce054d6f2c3a2c"
     pullPolicy: Always
-
 replicaCount: 1
-
 ingress:
   enabled: true
   className: "nginx"
@@ -29,15 +27,12 @@ ingress:
         - path: /
           pathType: Prefix
           service: frontend
-
 autoscaling:
   enabled: false
-
 backend:
   env:
     DATABASE_URL: "postgresql+asyncpg://app:app@postgres:5432/medical_appointment"
     CORS_ORIGINS: '["https://medical-appointment-development.example.com"]'
-
 frontend:
   env:
     VITE_API_BASE_URL: "https://medical-appointment-development.example.com/api"
