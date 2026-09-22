@@ -32,6 +32,7 @@ Clone both repos side by side:
 ```bash
 minikube start --driver=docker --cpus=4 --memory=8192 --disk-size=20gb
 minikube addons enable ingress
+minikube addons enable metrics-server  # required for HPA (autoscaling)
 kubectl get nodes
 ```
 
