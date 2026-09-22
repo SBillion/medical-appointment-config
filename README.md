@@ -4,31 +4,24 @@ GitOps configuration repository for the medical-appointment system using ArgoCD 
 
 ## 📋 Overview
 
-This repository contains Kubernetes manifests and Helm charts for deploying the medical appointment booking system across different environments (develop, production) using GitOps principles with ArgoCD.
+This repository contains Kubernetes manifests and environment value overrides for deploying the medical appointment booking system across environments (development, production) using GitOps principles with ArgoCD.
+
+> **Note:** The Helm chart (templates + base `values.yaml`) now lives in the
+> **application repository** at [`SBillion/medical-appointment`](https://github.com/SBillion/medical-appointment)
+> under `deploy/charts/medical-appointment`. ArgoCD renders the chart from
+> that repo (multi-source) and applies the per-env values from this repo.
 
 ## 🏗️ Repository Structure
 
 ```
 medical-appointment-config/
-├── charts/
-│   └── medical-appointment/          # Helm chart
-│       ├── Chart.yaml                # Chart metadata
-│       ├── values.yaml               # Default values
-│       ├── values-develop.yaml       # Development overrides
-│       ├── values-production.yaml    # Production overrides
-│       └── templates/                # Kubernetes templates
-│           ├── backend/              # Backend deployment
-│           ├── frontend/             # Frontend deployment
-│           ├── postgres/             # PostgreSQL database
-│           ├── ingress/              # Ingress configuration
-│           ├── serviceaccount.yaml   # Service account
-│           ├── _helpers.tpl          # Helm helpers
-│           └── NOTES.txt             # Installation notes
-├── apps/
-│   ├── develop/
-│   │   └── medical-appointment.yaml  # ArgoCD app for dev
+├── envs/
+│   ├── development/
+│   │   └── values.yaml               # Development overrides + image tag (CI-bumped)
 │   └── production/
-│       └── medical-appointment.yaml  # ArgoCD app for prod
+│       └── values.yaml                # Production overrides + image tag (CI-bumped)
+├── apps/
+│   └── medical-appointment.yaml       # ApplicationSet (generates dev + prod apps)
 ├── secrets/                          # Encrypted secrets (SOPS)
 └── docs/                             # Documentation
 ```
@@ -46,19 +39,24 @@ This repository is configured with **automatic synchronization** enabled. When y
 ### Triggering Syncs
 
 **Automatic:**
-- Push changes to `develop` branch → updates development cluster
-- Push changes to `main` branch → updates production cluster
+- A PR merged into `main` of the app repo triggers its `Release` workflow,
+  which builds images (tagged with the commit SHA) and opens/updates one
+  stacked deploy PR per environment on this repo (branch `deploy/<env>-pending`).
+- **development** deploy PR is fast-tracked (auto-merged) → ArgoCD auto-syncs
+  `medical-appointment-development`.
+- **production** deploy PR requires manual approval → once merged, ArgoCD
+  auto-syncs `medical-appointment-production`.
 
 **Manual:**
 ```bash
 # Sync specific application
-argocd app sync medical-appointment-develop
+argocd app sync medical-appointment-development
 
 # Sync with force
-argocd app sync medical-appointment-develop --force
+argocd app sync medical-appointment-development --force
 
 # Watch sync progress
-argocd app watch medical-appointment-develop
+argocd app watch medical-appointment-development
 ```
 
 ### Sync Configuration
@@ -110,14 +108,14 @@ See [docs/AUTO_SYNC.md](docs/AUTO_SYNC.md) for detailed sync configuration and t
 
 5. **Deploy Application:**
    ```bash
-   # Create develop namespace
-   kubectl create namespace medical-appointment-develop
+   # Create local dev namespace
+   kubectl create namespace medical-appointment-dev
 
-   # Install chart locally
-   cd ../medical-appointment-config
-   helm install medical-appointment ./charts/medical-appointment \
-     --namespace medical-appointment-develop \
-     --values charts/medical-appointment/values-develop.yaml
+   # Install chart locally (chart lives in the app repo now)
+   cd ../medical-appointment
+   helm install medical-appointment deploy/charts/medical-appointment \
+     --namespace medical-appointment-dev \
+     --values deploy/charts/medical-appointment/values-develop.yaml
    ```
 
 6. **Access Application:**
@@ -128,33 +126,29 @@ See [docs/AUTO_SYNC.md](docs/AUTO_SYNC.md) for detailed sync configuration and t
    # Access at http://medical-appointment.local
    ```
 
-### Production Deployment
+### Deployments (development / production)
 
-1. **Build and Push Images:**
-   ```bash
-   cd ../medical-appointment/backend
-   docker build -t ghcr.io/sbillion/medical-appointment-backend:1.0.0 .
-   docker push ghcr.io/sbillion/medical-appointment-backend:1.0.0
+Image builds, pushes, and value updates are now automated by the `Release`
+workflow in the **app repository**. When a PR merges into `main` there:
 
-   cd ../frontend
-   docker build -t ghcr.io/sbillion/medical-appointment-frontend:1.0.0 .
-   docker push ghcr.io/sbillion/medical-appointment-frontend:1.0.0
-   ```
+1. Backend + frontend images are pushed to GHCR, tagged with the merge commit SHA.
+2. Two stacked deploy PRs are opened (or updated) on this repo:
+   - `deploy/development-pending` → `main` (auto-merged, fast-tracked)
+   - `deploy/production-pending` → `main` (manual approval gate)
+3. Each deploy PR body lists the app PRs that will be deployed (with a
+   hyperlink + checkbox) and is re-pointed to the latest SHA on `main` until
+   it is merged.
+4. Once merged, ArgoCD auto-syncs the matching Application.
 
-2. **Update Chart Values:**
-   ```bash
-   # Edit values-production.yaml with new image tags
-   ```
+**Manual (first-time setup):**
+```bash
+# Apply ArgoCD application manifests
+kubectl apply -f apps/medical-appointment.yaml
 
-3. **Deploy via ArgoCD:**
-   ```bash
-   # Apply ArgoCD application manifest
-   kubectl apply -f apps/production/medical-appointment.yaml
-
-   # Monitor sync
-   argocd app get medical-appointment-production
-   argocd app sync medical-appointment-production
-   ```
+# Monitor sync
+argocd app get medical-appointment-development
+argocd app get medical-appointment-production
+```
 
 ## 🔧 Configuration
 
@@ -209,30 +203,30 @@ Key configurable parameters:
 
 ### Check Pod Status
 ```bash
-kubectl get pods -n medical-appointment-develop
-kubectl logs -f deployment/backend -n medical-appointment-develop
-kubectl logs -f deployment/frontend -n medical-appointment-develop
+kubectl get pods -n medical-appointment-dev
+kubectl logs -f deployment/backend -n medical-appointment-dev
+kubectl logs -f deployment/frontend -n medical-appointment-dev
 ```
 
 ### Debug ArgoCD
 ```bash
-argocd app get medical-appointment-develop
-argocd app logs medical-appointment-develop
-argocd app sync medical-appointment-develop --force
+argocd app get medical-appointment-development
+argocd app logs medical-appointment-development
+argocd app sync medical-appointment-development --force
 ```
 
 ### Database Issues
 ```bash
-kubectl exec -it statefulset/postgres -n medical-appointment-develop -- psql -U app -d medical_appointment
+kubectl exec -it statefulset/postgres -n medical-appointment-dev -- psql -U app -d medical_appointment
 ```
 
 ### Port Forwarding
 ```bash
 # Backend
-kubectl port-forward svc/backend 8000:80 -n medical-appointment-develop
+kubectl port-forward svc/backend 8000:80 -n medical-appointment-dev
 
 # Frontend
-kubectl port-forward svc/frontend 5173:80 -n medical-appointment-develop
+kubectl port-forward svc/frontend 5173:80 -n medical-appointment-dev
 ```
 
 ## 📊 Monitoring
@@ -245,10 +239,10 @@ kubectl port-forward svc/frontend 5173:80 -n medical-appointment-develop
 ### Logs
 ```bash
 # All pods
-kubectl logs -f -n medical-appointment-develop --all-containers=true
+kubectl logs -f -n medical-appointment-dev --all-containers=true
 
 # Specific component
-kubectl logs -f deployment/backend -n medical-appointment-develop
+kubectl logs -f deployment/backend -n medical-appointment-dev
 ```
 
 ## 🔐 Security
@@ -270,10 +264,10 @@ Consider adding network policies to restrict traffic:
 
 ```bash
 # Uninstall Helm release
-helm uninstall medical-appointment -n medical-appointment-develop
+helm uninstall medical-appointment -n medical-appointment-dev
 
 # Delete namespace
-kubectl delete namespace medical-appointment-develop
+kubectl delete namespace medical-appointment-dev
 
 # Remove ArgoCD
 kubectl delete -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml

@@ -1,26 +1,33 @@
-name: Update ArgoCD Application
+name: Update ArgoCD Applications
+
 on:
   push:
     branches:
-      - develop
       - main
     paths:
-      - 'charts/**'
-      - 'apps/**'
+      - "envs/**"
+      - "apps/**"
 
 jobs:
   trigger-argocd-sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Determine environment
-        id: env
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed applications
+        id: apps
         run: |
-          if [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
-            echo "environment=develop" >> $GITHUB_OUTPUT
-            echo "app_name=medical-appointment-develop" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            echo "environment=production" >> $GITHUB_OUTPUT
-            echo "app_name=medical-appointment-production" >> $GITHUB_OUTPUT
+          echo "sync_development=false" >> "$GITHUB_OUTPUT"
+          echo "sync_production=false" >> "$GITHUB_OUTPUT"
+          files=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} 2>/dev/null || true)
+          echo "$files"
+          if echo "$files" | grep -qE '^envs/development/'; then
+            echo "sync_development=true" >> "$GITHUB_OUTPUT"
+          fi
+          if echo "$files" | grep -qE '^envs/production/'; then
+            echo "sync_production=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Install ArgoCD CLI
@@ -33,12 +40,16 @@ jobs:
         run: |
           argocd login ${{ secrets.ARGOCD_SERVER }} --username ${{ secrets.ARGOCD_USERNAME }} --password ${{ secrets.ARGOCD_PASSWORD }} --insecure
 
-      - name: Trigger ArgoCD Sync
+      - name: Sync development
+        if: steps.apps.outputs.sync_development == 'true'
         run: |
-          argocd app sync ${{ steps.env.outputs.app_name }} --async
-          echo "✅ Triggered sync for ${{ steps.env.outputs.app_name }}"
+          argocd app sync medical-appointment-development --async
+          argocd app wait medical-appointment-development --timeout 300s --health
+          echo "✅ Synced medical-appointment-development"
 
-      - name: Wait for sync completion
+      - name: Sync production
+        if: steps.apps.outputs.sync_production == 'true'
         run: |
-          argocd app wait ${{ steps.env.outputs.app_name }} --timeout 300s --health
-          echo "✅ Sync completed successfully for ${{ steps.env.outputs.app_name }}"
+          argocd app sync medical-appointment-production --async
+          argocd app wait medical-appointment-production --timeout 300s --health
+          echo "✅ Synced medical-appointment-production"

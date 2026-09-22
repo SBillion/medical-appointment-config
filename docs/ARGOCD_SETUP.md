@@ -66,14 +66,11 @@ argocd login argocd.example.com --username admin --password <password>
 ### Option 1: Deploy via CLI
 
 ```bash
-# Deploy development application
-kubectl apply -f apps/develop/medical-appointment.yaml
-
-# Deploy production application
-kubectl apply -f apps/production/medical-appointment.yaml
+# Deploy the ApplicationSet (generates both development + production apps)
+kubectl apply -f apps/medical-appointment.yaml
 
 # Wait for sync
-argocd app wait medical-appointment-develop --health
+argocd app wait medical-appointment-development --health
 argocd app wait medical-appointment-production --health
 ```
 
@@ -82,7 +79,7 @@ argocd app wait medical-appointment-production --health
 1. Open ArgoCD UI
 2. Click "New App" button
 3. Fill in application details:
-   - **Name**: `medical-appointment-develop`
+   - **Name**: `medical-appointment-development`
    - **Project**: `default`
    - **Sync Policy**: Automatic
    - **Repository URL**: `https://github.com/SBillion/medical-appointment-config.git`
@@ -184,52 +181,52 @@ data:
 argocd app list
 
 # Get application details
-argocd app get medical-appointment-develop
+argocd app get medical-appointment-development
 
 # Watch application in real-time
-argocd app watch medical-appointment-develop
+argocd app watch medical-appointment-development
 ```
 
 ### Sync Operations
 
 ```bash
 # Manual sync
-argocd app sync medical-appointment-develop
+argocd app sync medical-appointment-development
 
 # Sync with specific options
-argocd app sync medical-appointment-develop --prune --self-heal
+argocd app sync medical-appointment-development --prune --self-heal
 
 # Force sync
-argocd app sync medical-appointment-develop --force
+argocd app sync medical-appointment-development --force
 
 # Dry run (preview changes)
-argocd app sync medical-appointment-develop --dry-run
+argocd app sync medical-appointment-development --dry-run
 
 # Sync and wait for completion
-argocd app sync medical-appointment-develop --timeout 300s
+argocd app sync medical-appointment-development --timeout 300s
 ```
 
 ### Rollback Operations
 
 ```bash
 # Rollback to previous revision
-argocd app rollback medical-appointment-develop
+argocd app rollback medical-appointment-development
 
 # Rollback to specific revision
-argocd app rollback medical-appointment-develop --revision 12345
+argocd app rollback medical-appointment-development --revision 12345
 
 # View rollback history
-argocd app history medical-appointment-develop
+argocd app history medical-appointment-development
 ```
 
 ### Delete Applications
 
 ```bash
 # Delete application (keeps resources)
-argocd app delete medical-appointment-develop --cascade=false
+argocd app delete medical-appointment-development --cascade=false
 
 # Delete application and resources
-argocd app delete medical-appointment-develop --cascade=true
+argocd app delete medical-appointment-development --cascade=true
 ```
 
 ## 📊 Monitoring and Debugging
@@ -238,23 +235,23 @@ argocd app delete medical-appointment-develop --cascade=true
 
 ```bash
 # Get application status
-argocd app get medical-appointment-develop
+argocd app get medical-appointment-development
 
 # Check application resources
-argocd app resources medical-appointment-develop
+argocd app resources medical-appointment-development
 
 # Get application manifest
-argocd app manifest medical-appointment-develop
+argocd app manifest medical-appointment-development
 ```
 
 ### View Logs
 
 ```bash
 # Application logs
-argocd app logs medical-appointment-develop
+argocd app logs medical-appointment-development
 
 # Operation logs
-argocd app logs medical-appointment-develop --operation 12345
+argocd app logs medical-appointment-development --operation 12345
 
 # Controller logs
 kubectl logs -n argocd deployment/argocd-application-controller -f
@@ -264,16 +261,16 @@ kubectl logs -n argocd deployment/argocd-application-controller -f
 
 ```bash
 # Check sync status
-argocd app get medical-appointment-develop --sync
+argocd app get medical-appointment-development --sync
 
 # Get sync history
-argocd app history medical-appointment-develop
+argocd app history medical-appointment-development
 
 # Check diff between Git and cluster
-argocd app diff medical-appointment-develop
+argocd app diff medical-appointment-development
 
 # Get application details
-argocd app get medical-appointment-develop --hard-refresh
+argocd app get medical-appointment-development --hard-refresh
 ```
 
 ## 🔐 Security Setup
@@ -306,8 +303,8 @@ data:
   policy.csv: |
     p, role:readonly, applications, get, */*, allow
     p, role:readonly, applications, list, */*, allow
-    p, role:developer, applications, sync, medical-appointment-develop/*, allow
-    p, role:developer, applications, get, medical-appointment-develop/*, allow
+    p, role:developer, applications, sync, medical-appointment-development/*, allow
+    p, role:developer, applications, get, medical-appointment-development/*, allow
     p, role:ops, applications, sync, */*, allow
     p, role:ops, applications, get, */*, allow
   policy.default: role:readonly
@@ -362,7 +359,7 @@ data:
 
 ```bash
 # Delete applications
-argocd app delete medical-appointment-develop --cascade=true
+argocd app delete medical-appointment-development --cascade=true
 argocd app delete medical-appointment-production --cascade=true
 
 # Delete ArgoCD
@@ -408,17 +405,17 @@ argocd server --insecure
 argocd repo get https://github.com/SBillion/medical-appointment-config.git
 
 # Check application status
-argocd app get medical-appointment-develop --hard-refresh
+argocd app get medical-appointment-development --hard-refresh
 ```
 
 ### Auto-Sync Not Triggering
 
 ```bash
 # Check sync policy
-argocd app get medical-appointment-develop --sync
+argocd app get medical-appointment-development --sync
 
 # Manually trigger sync
-argocd app sync medical-appointment-develop
+argocd app sync medical-appointment-development
 
 # Check ArgoCD logs
 kubectl logs -n argocd deployment/argocd-repo-server -f

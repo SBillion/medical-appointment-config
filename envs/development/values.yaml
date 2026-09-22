@@ -1,0 +1,43 @@
+# Staging environment overrides for medical-appointment.
+#
+# The image tags below are updated automatically by the Release workflow in
+# the medical-appointment application repository. A single stacked deploy PR
+# ("deploy/development-pending" -> main) is kept open and bumped to the latest
+# commit SHA on main until it is merged.
+
+image:
+  backend:
+    repository: ghcr.io/sbillion/medical-appointment-backend
+    tag: "initial"
+    pullPolicy: Always
+  frontend:
+    repository: ghcr.io/sbillion/medical-appointment-frontend
+    tag: "initial"
+    pullPolicy: Always
+
+replicaCount: 1
+
+ingress:
+  enabled: true
+  className: "nginx"
+  hosts:
+    - host: medical-appointment-development.example.com
+      paths:
+        - path: /api
+          pathType: Prefix
+          service: backend
+        - path: /
+          pathType: Prefix
+          service: frontend
+
+autoscaling:
+  enabled: false
+
+backend:
+  env:
+    DATABASE_URL: "postgresql+asyncpg://app:app@postgres:5432/medical_appointment"
+    CORS_ORIGINS: '["https://medical-appointment-development.example.com"]'
+
+frontend:
+  env:
+    VITE_API_BASE_URL: "https://medical-appointment-development.example.com/api"

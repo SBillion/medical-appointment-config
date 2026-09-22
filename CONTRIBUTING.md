@@ -77,22 +77,25 @@ argocd login localhost:8080 \
 
 ## 4. Deploy via ArgoCD (GitOps)
 
-Register the application so ArgoCD watches this repo:
+Register the applications so ArgoCD watches this repo + the app repo's chart:
 
 ```bash
-kubectl apply -f apps/develop/medical-appointment.yaml
+kubectl apply -f apps/medical-appointment.yaml
 ```
 
-ArgoCD will now:
-1. Clone this repo at the `develop` branch
-2. Render the Helm chart with `values-develop.yaml`
-3. Sync every resource into the `medical-appointment-develop` namespace
-4. Keep polling — any new commit auto-syncs
+ArgoCD will now (for development):
+1. Clone the **app repo** at `main` for the chart (`deploy/charts/medical-appointment`)
+2. Merge the env override from `envs/development/values.yaml` (this repo, `main`)
+3. Sync resources into the `medical-appointment-development` namespace
+4. Keep polling — any new commit auto-syncs (development)
+
+Production follows the same flow but its deploy PR is gated for manual
+approval before merge.
 
 Watch it happen:
 
 ```bash
-argocd app get medical-appointment-develop --watch
+argocd app get medical-appointment-development --watch
 ```
 
 ## 5. Access the application
@@ -111,8 +114,8 @@ open http://medical-appointment.local
 If ingress isn't resolving, fall back to port-forward:
 
 ```bash
-kubectl port-forward svc/backend  8000:80 -n medical-appointment-develop &
-kubectl port-forward svc/frontend 5173:80 -n medical-appointment-develop &
+kubectl port-forward svc/backend  8000:80 -n medical-appointment-dev &
+kubectl port-forward svc/frontend 5173:80 -n medical-appointment-dev &
 ```
 
 ---
@@ -132,25 +135,28 @@ eval $(minikube docker-env)
 docker build -t medical-appointment-backend:local ./backend
 
 # 3. Restart the pod so it picks up the new image
-kubectl rollout restart deployment/backend -n medical-appointment-develop
-kubectl rollout status deployment/backend -n medical-appointment-develop
+kubectl rollout restart deployment/backend -n medical-appointment-dev
+kubectl rollout status deployment/backend -n medical-appointment-dev
 ```
 
 Same pattern for the frontend — just swap `backend` → `frontend`.
 
-### Change Kubernetes config (Helm values, templates)
+### Change Kubernetes config (Helm values / templates)
+
+Chart templates now live in the **app repo** at
+`deploy/charts/medical-appointment`. Per-env values live here under `envs/`.
 
 ```bash
-# 1. Edit a chart file
-vim charts/medical-appointment/values-develop.yaml
+# 1. Edit an env value override (this repo)
+vim envs/development/values.yaml
 
 # 2. Commit and push
 git add -A
 git commit -m "feat: increase backend memory limit"
-git push origin develop
+git push origin main
 
 # 3. ArgoCD auto-syncs within ~3 min, or trigger immediately:
-argocd app sync medical-appointment-develop
+argocd app sync medical-appointment-development
 ```
 
 Because `syncPolicy.automated.selfHeal: true`, any manual `kubectl edit` you do will also be reverted to match Git.
@@ -158,16 +164,16 @@ Because `syncPolicy.automated.selfHeal: true`, any manual `kubectl edit` you do 
 ### Test a Helm render locally (no cluster needed)
 
 ```bash
-helm template medical-appointment ./charts/medical-appointment \
-  --values charts/medical-appointment/values-develop.yaml
+helm template medical-appointment ../medical-appointment/deploy/charts/medical-appointment \
+  --values ../medical-appointment/deploy/charts/medical-appointment/values-develop.yaml
 ```
 
 ### Diff what a values change would apply
 
 ```bash
-helm diff upgrade medical-appointment ./charts/medical-appointment \
-  --namespace medical-appointment-develop \
-  --values charts/medical-appointment/values-develop.yaml
+helm diff upgrade medical-appointment ../medical-appointment/deploy/charts/medical-appointment \
+  --namespace medical-appointment-dev \
+  --values ../medical-appointment/deploy/charts/medical-appointment/values-develop.yaml
 ```
 
 (Requires the `helm-diff` plugin: `helm plugin install https://github.com/databus23/helm-diff`)
@@ -180,15 +186,15 @@ PostgreSQL runs as a StatefulSet with a PersistentVolumeClaim. Init scripts (sch
 
 ```bash
 # Connect
-kubectl exec -it statefulset/postgres -n medical-appointment-develop -- \
+kubectl exec -it statefulset/postgres -n medical-appointment-dev -- \
   psql -U app -d medical_appointment
 
 # Check tables
 \dt
 
 # Reset everything (destructive)
-kubectl delete pvc data-postgres-0 -n medical-appointment-develop
-kubectl rollout restart statefulset/postgres -n medical-appointment-develop
+kubectl delete pvc data-postgres-0 -n medical-appointment-dev
+kubectl rollout restart statefulset/postgres -n medical-appointment-dev
 ```
 
 ---
@@ -197,15 +203,15 @@ kubectl rollout restart statefulset/postgres -n medical-appointment-develop
 
 | What | Command |
 |------|---------|
-| List pods | `kubectl get pods -n medical-appointment-develop` |
-| Backend logs | `kubectl logs -f deployment/backend -n medical-appointment-develop` |
-| Frontend logs | `kubectl logs -f deployment/frontend -n medical-appointment-develop` |
-| DB logs | `kubectl logs -f statefulset/postgres -n medical-appointment-develop` |
-| Resource usage | `kubectl top pods -n medical-appointment-develop` |
-| Shell into backend | `kubectl exec -it deployment/backend -n medical-appointment-develop -- /bin/bash` |
-| ArgoCD app status | `argocd app get medical-appointment-develop` |
-| Force sync | `argocd app sync medical-appointment-develop --force` |
-| Helm release values | `helm get values medical-appointment -n medical-appointment-develop` |
+| List pods | `kubectl get pods -n medical-appointment-dev` |
+| Backend logs | `kubectl logs -f deployment/backend -n medical-appointment-dev` |
+| Frontend logs | `kubectl logs -f deployment/frontend -n medical-appointment-dev` |
+| DB logs | `kubectl logs -f statefulset/postgres -n medical-appointment-dev` |
+| Resource usage | `kubectl top pods -n medical-appointment-dev` |
+| Shell into backend | `kubectl exec -it deployment/backend -n medical-appointment-dev -- /bin/bash` |
+| ArgoCD app status | `argocd app get medical-appointment-dev` |
+| Force sync | `argocd app sync medical-appointment-dev --force` |
+| Helm release values | `helm get values medical-appointment -n medical-appointment-dev` |
 
 ---
 
@@ -224,22 +230,22 @@ docker build -t medical-appointment-frontend:local ../medical-appointment/fronte
 ### CrashLoopBackOff
 
 ```bash
-kubectl logs <pod-name> -n medical-appointment-develop
-kubectl describe pod <pod-name> -n medical-appointment-develop
+kubectl logs <pod-name> -n medical-appointment-dev
+kubectl describe pod <pod-name> -n medical-appointment-dev
 ```
 
 ### ArgoCD shows "Out of Sync"
 
 ```bash
-argocd app diff medical-appointment-develop   # see what drifted
-argocd app sync medical-appointment-develop   # force sync
+argocd app diff medical-appointment-dev   # see what drifted
+argocd app sync medical-appointment-dev   # force sync
 ```
 
 ### Ingress not working
 
 ```bash
-kubectl get ingress -n medical-appointment-develop
-kubectl describe ingress -n medical-appointment-develop
+kubectl get ingress -n medical-appointment-dev
+kubectl describe ingress -n medical-appointment-dev
 minikube addons enable ingress   # make sure the addon is on
 ```
 
@@ -249,7 +255,7 @@ minikube addons enable ingress   # make sure the addon is on
 
 ```bash
 # Remove the app
-argocd app delete medical-appointment-develop --cascade=true
+argocd app delete medical-appointment-dev --cascade=true
 
 # Remove ArgoCD
 kubectl delete -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
@@ -270,7 +276,7 @@ minikube delete      # full reset
 | | develop | production |
 |---|---|---|
 | Branch | `develop` | `main` |
-| Namespace | `medical-appointment-develop` | `medical-appointment-production` |
+| Namespace | `medical-appointment-dev` | `medical-appointment-production` |
 | Values | `values-develop.yaml` | `values-production.yaml` |
 | Images | Local (`:local`, `Never`) | GHCR (`:1.0.0`, `Always`) |
 | HPA | Off | On (2–5 replicas) |

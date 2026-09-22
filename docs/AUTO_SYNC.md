@@ -38,13 +38,13 @@ syncPolicy:
 ### Using ArgoCD CLI
 ```bash
 # Sync specific application
-argocd app sync medical-appointment-develop
+argocd app sync medical-appointment-development
 
 # Sync with force override
-argocd app sync medical-appointment-develop --force
+argocd app sync medical-appointment-development --force
 
 # Sync and wait for completion
-argocd app sync medical-appointment-develop --timeout 300s
+argocd app sync medical-appointment-development --timeout 300s
 
 # Sync all applications
 argocd app sync -a app.kubernetes.io/name=medical-appointment
@@ -63,7 +63,7 @@ kubectl create -f - <<EOF
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: medical-appointment-develop
+  name: medical-appointment-development
   annotations:
     argocd.argoproj.io/sync-wave: "0"
 EOF
@@ -128,43 +128,43 @@ metadata:
 ### Check Sync Status
 ```bash
 # Get application status
-argocd app get medical-appointment-develop
+argocd app get medical-appointment-development
 
 # Check sync history
-argocd app history medical-appointment-develop
+argocd app history medical-appointment-development
 
 # View operation logs
-argocd app logs medical-appointment-develop
+argocd app logs medical-appointment-development
 ```
 
 ### Debug Sync Issues
 ```bash
 # Check application resources
-argocd app resources medical-appointment-develop
+argocd app resources medical-appointment-development
 
 # Get application manifest
-argocd app manifest medical-appointment-develop
+argocd app manifest medical-appointment-development
 
 # Dry-run sync
-argocd app sync medical-appointment-develop --dry-run
+argocd app sync medical-appointment-development --dry-run
 ```
 
 ### Manual Rollback
 ```bash
 # Rollback to previous revision
-argocd app rollback medical-appointment-develop
+argocd app rollback medical-appointment-development
 
 # Rollback to specific revision
-argocd app rollback medical-appointment-develop --revision 12345
+argocd app rollback medical-appointment-development --revision 12345
 ```
 
 ### Force Resync
 ```bash
 # Force sync from Git
-argocd app sync medical-appointment-develop --force
+argocd app sync medical-appointment-development --force
 
 # Hard refresh (delete and recreate)
-argocd app sync medical-appointment-develop --force --replace
+argocd app sync medical-appointment-development --force --replace
 ```
 
 ## 📊 Monitoring Sync Operations
@@ -172,19 +172,19 @@ argocd app sync medical-appointment-develop --force --replace
 ### Watch Real-time Sync
 ```bash
 # Watch sync progress
-argocd app watch medical-appointment-develop
+argocd app watch medical-appointment-development
 
 # Monitor application health
-watch argocd app get medical-appointment-develop
+watch argocd app get medical-appointment-development
 ```
 
 ### Check Sync History
 ```bash
 # List sync operations
-argocd app history medical-appointment-develop
+argocd app history medical-appointment-development
 
 # Get specific sync details
-argocd app get medical-appointment-develop --operation 12345
+argocd app get medical-appointment-development --operation 12345
 ```
 
 ## 🔐 Security Considerations
@@ -203,8 +203,8 @@ metadata:
   namespace: argocd
 data:
   policy.csv: |
-    p, role:developer, applications, sync, medical-appointment-develop/*, allow
-    p, role:developer, applications, get, medical-appointment-develop/*, allow
+    p, role:developer, applications, sync, medical-appointment-development/*, allow
+    p, role:developer, applications, get, medical-appointment-development/*, allow
     p, role:ops, applications, sync, medical-appointment-production/*, allow
     p, role:ops, applications, get, medical-appointment-production/*, allow
 ```
@@ -222,28 +222,28 @@ git commit -m "test: verify auto-sync"
 git push origin develop
 
 # Watch ArgoCD sync
-argocd app watch medical-appointment-develop
+argocd app watch medical-appointment-development
 ```
 
 ### Test Manual Sync
 ```bash
 # Manually trigger sync
-argocd app sync medical-appointment-develop
+argocd app sync medical-appointment-development
 
 # Verify sync completed
-argocd app get medical-appointment-develop --sync
+argocd app get medical-appointment-development --sync
 ```
 
 ### Test Self-Healing
 ```bash
 # Make manual change to deployment
-kubectl scale deployment backend --replicas=3 -n medical-appointment-develop
+kubectl scale deployment backend --replicas=3 -n medical-appointment-development
 
 # Wait for ArgoCD to auto-correct
 sleep 10
 
 # Verify replicas restored
-kubectl get deployment backend -n medical-appointment-develop
+kubectl get deployment backend -n medical-appointment-development
 ```
 
 ## 📈 Best Practices

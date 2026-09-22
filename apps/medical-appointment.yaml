@@ -1,0 +1,66 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: medical-appointment
+  namespace: argocd
+  labels:
+    app: medical-appointment
+spec:
+  generators:
+    - list:
+        elements:
+          - env: development
+            namespace: medical-appointment-development
+            valuesFile: envs/development/values.yaml
+          - env: production
+            namespace: medical-appointment-production
+            valuesFile: envs/production/values.yaml
+  template:
+    metadata:
+      name: "medical-appointment-{{env}}"
+      labels:
+        app: medical-appointment
+        environment: "{{env}}"
+      annotations:
+        argocd-image-updater.argoproj.io/image-list: backend=ghcr.io/sbillion/medical-appointment-backend,frontend=ghcr.io/sbillion/medical-appointment-frontend
+        argocd-image-updater.argoproj.io/backend.update-strategy: digest
+        argocd-image-updater.argoproj.io/frontend.update-strategy: digest
+    spec:
+      project: default
+      sources:
+        # Helm chart templates live in the application repository.
+        - repoURL: https://github.com/SBillion/medical-appointment.git
+          targetRevision: main
+          path: deploy/charts/medical-appointment
+          helm:
+            valueFiles:
+              # Env override (incl. image tag) comes from this config repository.
+              - $configrepo/{{valuesFile}}
+        # Provides the $configrepo reference used by the chart's valueFiles above.
+        - repoURL: https://github.com/SBillion/medical-appointment-config.git
+          targetRevision: main
+          ref: configrepo
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "{{namespace}}"
+      syncPolicy:
+        # Both envs auto-sync. Production is gated upstream by the manual
+        # approval of its deploy PR on this repo (deploy/production-pending).
+        automated:
+          prune: true
+          selfHeal: true
+          allowEmpty: false
+        syncOptions:
+          - CreateNamespace=true
+          - PrunePropagationPolicy=foreground
+          - Replace=true
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m
+        managedNamespaceMetadata:
+          labels:
+            environment: "{{env}}"
+            app: medical-appointment

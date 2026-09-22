@@ -1,15 +1,21 @@
-# Production environment overrides
-replicaCount: 2
+# Production environment overrides for medical-appointment.
+#
+# The image tags below are updated automatically by the Release workflow in
+# the medical-appointment application repository. A single stacked deploy PR
+# ("deploy/production-pending" -> main) is kept open and bumped to the latest
+# commit SHA on main until it is merged (manual approval gate).
 
 image:
   backend:
     repository: ghcr.io/sbillion/medical-appointment-backend
-    tag: "1.0.0"
+    tag: "initial"
     pullPolicy: Always
   frontend:
     repository: ghcr.io/sbillion/medical-appointment-frontend
-    tag: "1.0.0"
+    tag: "initial"
     pullPolicy: Always
+
+replicaCount: 2
 
 ingress:
   enabled: true
