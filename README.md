@@ -46,6 +46,14 @@ medical-appointment-config/
 | TLS | None | cert-manager + Let's Encrypt |
 | Deploy PR | Auto-merged | Manual approval |
 
+## Auto-Sync
+
+ArgoCD keeps the cluster in sync with Git via:
+1. **Git Webhook** (optional): GitHub POSTs to ArgoCD's `/api/webhook` →
+   instant refresh (see [docs/ARGOCD_SETUP.md](docs/ARGOCD_SETUP.md#git-webhook))
+2. **Polling**: ArgoCD polls every 3 minutes by default
+3. **Self-Healing**: auto-corrects drift between Git and cluster state
+
 ## Quick Start
 
 See **[CONTRIBUTING.md](CONTRIBUTING.md)** for the complete setup guide

@@ -117,6 +117,52 @@ metadata:
 
 ---
 
+## Git Webhook (Optional)
+
+By default ArgoCD polls Git every 3 minutes. To get instant syncs on push,
+configure a GitHub webhook that POSTs to ArgoCD's `/api/webhook` endpoint —
+no ArgoCD CLI or GitHub Actions needed.
+
+### 1. Create the webhook on GitHub
+
+On each repository (config repo **and** app repo):
+
+1. Go to **Settings → Webhooks → Add webhook**
+2. **Payload URL**: `https://<your-argocd-server>/api/webhook`
+3. **Content type**: `application/json` (required — the default
+   `application/x-www-form-urlencoded` is not supported)
+4. **Secret**: any secure value (optional but recommended)
+5. **Events**: "Just the push event"
+6. Click **Add webhook**
+
+### 2. Configure the secret in ArgoCD
+
+Store the same secret in the `argocd-secret` Kubernetes secret:
+
+```bash
+kubectl edit secret argocd-secret -n argocd
+```
+
+Add under `stringData`:
+
+```yaml
+stringData:
+  webhook.github.secret: <same-secret-as-github>
+```
+
+The changes take effect automatically — no restart needed.
+
+### How it works
+
+When GitHub pushes to either repo, it POSTs to `/api/webhook`. ArgoCD
+refreshes only the Applications whose `repoURL` matches, and auto-sync
+kicks in immediately.
+
+> **Tip:** You can also enable "Packages" events on the app repo webhook
+> to trigger a refresh when new images are pushed to GHCR.
+
+---
+
 ## Performance Tuning
 
 Adjust ArgoCD server resources and reconciliation timeouts:
