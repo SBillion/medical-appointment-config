@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  helm-template:
+    name: Helm template (${{ matrix.env }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        env: [development, production]
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout app repo
+        uses: actions/checkout@v4
+        with:
+          repository: SBillion/medical-appointment
+          path: app-repo
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: Render chart
+        run: |
+          helm template medical-appointment app-repo/deploy/charts/medical-appointment \
+            -f envs/${{ matrix.env }}/values.yaml \
+            > /dev/null
