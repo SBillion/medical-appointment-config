@@ -18,9 +18,10 @@ replicaCount: 2
 ingress:
   enabled: true
   className: "nginx"
-  annotations: {}
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
   hosts:
-    - host: medical-appointment.local
+    - host: medical-appointment.example.com
       paths:
         - path: /api
           pathType: Prefix
@@ -37,6 +38,13 @@ autoscaling:
   minReplicas: 2
   maxReplicas: 5
   targetCPUUtilizationPercentage: 70
+backend:
+  env:
+    DATABASE_URL: "postgresql+asyncpg://app:app@postgres:5432/medical_appointment"
+    CORS_ORIGINS: '["https://medical-appointment.example.com"]'
+frontend:
+  env:
+    VITE_API_BASE_URL: "https://medical-appointment.example.com/api"
 resources:
   backend:
     limits:
