@@ -21,10 +21,7 @@ spec:
       labels:
         app: medical-appointment
         environment: "{{env}}"
-      annotations:
-        argocd-image-updater.argoproj.io/image-list: backend=ghcr.io/sbillion/medical-appointment-backend,frontend=ghcr.io/sbillion/medical-appointment-frontend
-        argocd-image-updater.argoproj.io/backend.update-strategy: digest
-        argocd-image-updater.argoproj.io/frontend.update-strategy: digest
+      annotations: {}
     spec:
       project: default
       sources:
