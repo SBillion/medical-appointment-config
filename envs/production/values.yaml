@@ -40,6 +40,7 @@ autoscaling:
   targetCPUUtilizationPercentage: 70
 backend:
   env:
+    DATABASE_URL: "postgresql+asyncpg://app:app@postgres:5432/medical_appointment"
     CORS_ORIGINS: '["https://medical-appointment.example.com"]'
 frontend:
   env:
@@ -60,7 +61,6 @@ resources:
       cpu: 100m
       memory: 128Mi
 postgres:
-  existingSecret: postgres-credentials
   resources:
     limits:
       cpu: 1000m
