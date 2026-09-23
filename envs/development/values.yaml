@@ -19,7 +19,7 @@ ingress:
   enabled: true
   className: "nginx"
   hosts:
-    - host: medical-appointment-development.example.com
+    - host: medical-appointment.local
       paths:
         - path: /api
           pathType: Prefix
@@ -32,7 +32,7 @@ autoscaling:
 backend:
   env:
     DATABASE_URL: "postgresql+asyncpg://app:app@postgres:5432/medical_appointment"
-    CORS_ORIGINS: '["https://medical-appointment-development.example.com"]'
+    CORS_ORIGINS: '["http://medical-appointment.local"]'
 frontend:
   env:
-    VITE_API_BASE_URL: "https://medical-appointment-development.example.com/api"
+    VITE_API_BASE_URL: "http://medical-appointment.local/api"
