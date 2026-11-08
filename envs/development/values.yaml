@@ -8,11 +8,11 @@
 image:
   backend:
     repository: ghcr.io/sbillion/medical-appointment-backend
-    tag: "ac06d8ded3b4933ff6eeb0b69bcbd38ee69b44be"
+    tag: "363946854193c826bc2f17d4d30ca8efd800e565"
     pullPolicy: Always
   frontend:
     repository: ghcr.io/sbillion/medical-appointment-frontend
-    tag: "ac06d8ded3b4933ff6eeb0b69bcbd38ee69b44be"
+    tag: "363946854193c826bc2f17d4d30ca8efd800e565"
     pullPolicy: Always
 replicaCount: 1
 ingress:
